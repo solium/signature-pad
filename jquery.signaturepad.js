@@ -262,6 +262,9 @@
             output = []
         }
 
+	function length(a,b) {
+	    return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
+	}
         function smoothCurves() {
             stopDrawing()
 
@@ -293,6 +296,7 @@
             }
             avg_spacing /= count;
             console.log('avg spacing ' + avg_spacing);
+	    $('.avg-sp').html(avg_spacing);
 
             var skip = Math.floor(12 - avg_spacing);
             if(skip < 4) skip = 4;
@@ -302,8 +306,17 @@
             for(var n=0;n<curves.length;++n) {
                 var curve = curves[n];
                 raw.push([]);
-                for(var i=0;i<curve.length;i+=skip) {
-                    raw[raw.length-1].push(curve[i]);
+		raw[raw.length-1].push(curve[0]);
+		var cur_seg = 0.0;
+		var last = 0;
+                for(var i=1;i<curve.length;i++) {
+		    cur_seg += length(curve[i],curve[i-1]);
+		    ++last;
+		    if(cur_seg > 25 || last > skip) {
+			raw[raw.length-1].push(curve[i]);
+			cur_seg = 0.0;
+			last = 0;
+		    }
                 }
                 if(raw[raw.length-1][raw[raw.length-1].length-1].x != curve[curve.length-1].x ||
                    raw[raw.length-1][raw[raw.length-1].length-1].y != curve[curve.length-1].y)
