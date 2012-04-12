@@ -265,6 +265,7 @@
 	function length(a,b) {
 	    return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
 	}
+
         function smoothCurves() {
             stopDrawing()
 
@@ -326,19 +327,24 @@
 
             console.log('number of curves: ' + raw.length);
             var longestSegmentLength = 0.0;
+            var totalLength = 0.0;
+            var segments = 0;
             for(var n=0;n<raw.length;++n) {
                 var r = raw[n];
                 console.log('size of curve ' + n + ': ' + r.length);
                 for(var i=0;i<r.length-1;++i) {
-                    var len = Math.sqrt((r[i].x-r[i+1].x)*(r[i].x-r[i+1].x) + (r[i].y-r[i+1].y)*(r[i].y-r[i+1].y));
+                    var len = length(r[i],r[i+1]);
+                    ++segments;
+                    totalLength += len;
                     if(len > longestSegmentLength) longestSegmentLength = len;
                 }
             }
 
             console.log('longest segment: ' + longestSegmentLength);
+            console.log('average segment: ' + totalLength / segments);
 
             var smoothed = [];
-            var steps = Math.log(longestSegmentLength) / Math.LN2;
+            var steps = Math.log(totalLength/segments) / Math.LN2;
 
             console.log('steps: ' + steps);
 
@@ -377,18 +383,15 @@
                 for(var i=1;i<c.length;++i) {
                     canvasContext.beginPath();
                     canvasContext.moveTo(c[i-1].x,c[i-1].y);
-                    var l = Math.sqrt((c[i].x-c[i-1].x)*(c[i].x-c[i-1].x) + (c[i].y-c[i-1].y)*(c[i].y-c[i-1].y)) * 0.5;
-                    //console.log('seg: ' + l);
+                    var l = length(c[i],c[i-1]);
                     if(l > 3) l = 3;
                     var w = 3.5 - (l);
-                    //console.log('wid: ' + w);
                     if(w < 0) w = 0;
                     canvasContext.lineWidth = w;
                     canvasContext.lineTo(c[i].x,c[i].y);
                     canvasContext.stroke();
                 }
             }
-            //canvasContext.closePath()            
         }
 
         /**
