@@ -173,7 +173,12 @@
                 newY += newYOffset
 
             canvasContext.beginPath()
+            var l = Math.sqrt((previous.x - newX)*(previous.x - newX) + (previous.y - newY) * (previous.y - newY)) * 0.5;
+            if(l > 3) l = 3;
+            var w = 3.5 - (l);
+            if(w < 0) w = 0;
             canvasContext.moveTo(previous.x, previous.y)
+            canvasContext.lineWidth = w;
             canvasContext.lineTo(newX, newY)
             canvasContext.lineCap = settings.penCap
             canvasContext.stroke()
@@ -220,6 +225,9 @@
          * @private
          */
         function drawSigLine () {
+            return false;
+
+
             if (!settings.lineWidth)
                 return false
 
@@ -252,6 +260,122 @@
 
             $(settings.output, context).val('')
             output = []
+        }
+
+        function smoothCurves() {
+            stopDrawing()
+
+            canvasContext.clearRect(0, 0, element.width, element.height)
+            canvasContext.fillStyle = settings.bgColour
+            canvasContext.fillRect(0, 0, element.width, element.height)
+
+            canvasContext.lineWidth = settings.penWidth
+            canvasContext.strokeStyle = settings.penColour
+
+            //$(settings.output, context).val('')
+
+            var curves = [];
+            var lastx = -1;
+            var lasty = -1;
+            var avg_spacing = 0.0;
+            var count = 0;
+            for(var i=0;i<output.length;++i) {
+                var p = output[i];
+                if(p.mx != lastx || p.my != lasty) {
+                    curves.push([]);
+                    curves[curves.length-1].push({ x : p.mx, y : p.my});
+                }
+                curves[curves.length-1].push({ x : p.lx, y : p.ly});
+                avg_spacing += Math.sqrt((p.mx - p.lx) * (p.mx - p.lx) + (p.my - p.ly) * (p.my - p.ly));
+                count++;
+                lastx = p.lx;
+                lasty = p.ly;
+            }
+            avg_spacing /= count;
+            console.log('avg spacing ' + avg_spacing);
+
+            var skip = Math.floor(12 - avg_spacing);
+            if(skip < 4) skip = 4;
+
+            // drop some of the points
+            var raw = [];
+            for(var n=0;n<curves.length;++n) {
+                var curve = curves[n];
+                raw.push([]);
+                for(var i=0;i<curve.length;i+=skip) {
+                    raw[raw.length-1].push(curve[i]);
+                }
+                if(raw[raw.length-1][raw[raw.length-1].length-1].x != curve[curve.length-1].x ||
+                   raw[raw.length-1][raw[raw.length-1].length-1].y != curve[curve.length-1].y)
+                    raw[raw.length-1].push(curve[curve.length-1]);
+            }
+
+
+            console.log('number of curves: ' + raw.length);
+            var longestSegmentLength = 0.0;
+            for(var n=0;n<raw.length;++n) {
+                var r = raw[n];
+                console.log('size of curve ' + n + ': ' + r.length);
+                for(var i=0;i<r.length-1;++i) {
+                    var len = Math.sqrt((r[i].x-r[i+1].x)*(r[i].x-r[i+1].x) + (r[i].y-r[i+1].y)*(r[i].y-r[i+1].y));
+                    if(len > longestSegmentLength) longestSegmentLength = len;
+                }
+            }
+
+            console.log('longest segment: ' + longestSegmentLength);
+
+            var smoothed = [];
+            var steps = Math.log(longestSegmentLength) / Math.LN2;
+
+            console.log('steps: ' + steps);
+
+            steps = 3;
+            for(var s = 0;s < steps; ++s) {
+                if(s > 0) {
+                    var tmp = smoothed.slice(0);
+                    raw = tmp;
+                    smoothed = [];
+                }
+                for(var n=0;n<raw.length;++n) {
+                    var r = raw[n];
+                    smoothed.push([]);
+                    smoothed[smoothed.length-1].push(r[0]);
+
+                    for(var i=1;i<r.length-1;++i) {
+                        smoothed[smoothed.length-1].push({
+                            x : 0.5*r[i-1].x + 0.5*r[i].x,
+                            y : 0.5*r[i-1].y + 0.5*r[i].y
+                        });
+                        smoothed[smoothed.length-1].push({
+                            x : 0.125*r[i-1].x + 0.75*r[i].x + 0.125*r[i+1].x,
+                            y : 0.125*r[i-1].y + 0.75*r[i].y + 0.125*r[i+1].y
+                        });
+                    }
+
+                    smoothed[smoothed.length-1].push(r[r.length-1]);
+                }
+            }
+
+            console.log('start drawing ...');
+
+            for(var n=0;n<smoothed.length;++n) {
+                var c = smoothed[n];
+                console.log('smoothed length: ' + c.length);
+                for(var i=1;i<c.length;++i) {
+                    canvasContext.beginPath();
+                    canvasContext.moveTo(c[i-1].x,c[i-1].y);
+                    var l = Math.sqrt((c[i].x-c[i-1].x)*(c[i].x-c[i-1].x) + (c[i].y-c[i-1].y)*(c[i].y-c[i-1].y)) * 0.5;
+                    //console.log('seg: ' + l);
+                    if(l > 3) l = 3;
+                    var w = 3.5 - (l);
+                    //console.log('wid: ' + w);
+                    if(w < 0) w = 0;
+                    canvasContext.lineWidth = w;
+                    canvasContext.lineTo(c[i].x,c[i].y);
+                    canvasContext.stroke();
+                }
+            }
+            //canvasContext.closePath()            
         }
 
         /**
@@ -320,13 +444,15 @@
 
             if (touchable) {
                 canvas.each(function () {
+                    this.addEventListener('touchend', smoothCurves, false)
+                    this.addEventListener('touchcancel', smoothCurves, false)
                     this.addEventListener('touchend', stopDrawing, false)
                     this.addEventListener('touchcancel', stopDrawing, false)
                 })
 
                     canvas.unbind('mousedown.signaturepad')
             } else {
-                canvas.bind('mouseup.signaturepad', function (e) { stopDrawing() })
+                canvas.bind('mouseup.signaturepad', function (e) { smoothCurves(); stopDrawing() })
                 canvas.bind('mouseleave.signaturepad', function (e) {
                     if (!mouseLeaveTimeout) {
                         mouseLeaveTimeout = setTimeout(function () {
@@ -376,8 +502,8 @@
             $(settings.drawIt, context).addClass(settings.currentClass)
             $(settings.sig, context).addClass(settings.currentClass)
 
-            $(settings.typeItDesc, context).hide()
-            $(settings.drawItDesc, context).show()
+            //$(settings.typeItDesc, context).hide()
+            //$(settings.drawItDesc, context).show()
             $(settings.clear, context).show()
         }
 
@@ -402,9 +528,10 @@
             $(settings.typeIt, context).addClass(settings.currentClass)
             $(settings.sig, context).removeClass(settings.currentClass)
 
-            $(settings.drawItDesc, context).hide()
+            //$(settings.drawItDesc, context).hide()
             $(settings.clear, context).hide()
-            $(settings.typeItDesc, context).show()
+            //$(settings.typeItDesc, context).show()
+            $(settings.name, context).focus();
         }
 
         /**
@@ -416,7 +543,9 @@
          * @param {String} val The value of the input field
          */
         function type (val) {
-            $(settings.typed, context).html(val.replace(/>/g, '&gt;').replace(/</g, '&lt;'))
+            $(settings.typed, context).css('font-size', '200px');
+            
+            $(settings.typed, context).html('&nbsp;' + val.replace(/>/g, '&gt;').replace(/</g, '&lt;') + '&nbsp;')
 
             while ($(settings.typed, context).width() > element.width) {
                 var oldSize = $(settings.typed, context).css('font-size').replace(/px/, '')
@@ -536,6 +665,7 @@
          * @private
          */
         function init () {
+            
             // Fixes the jQuery.fn.offset() function for Mobile Safari Browsers i.e. iPod Touch, iPad and iPhone
             // https://gist.github.com/661844
             // http://bugs.jquery.com/ticket/6446

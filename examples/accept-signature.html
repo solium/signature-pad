@@ -11,10 +11,7 @@
 </head>
 <body>
   <form method="post" action="" class="sigPad">
-    <label for="name">Print your name</label>
-    <input type="text" name="name" id="name" class="name">
-    <p class="typeItDesc">Review your signature</p>
-    <p class="drawItDesc">Draw your signature</p>
+    <p class="prompt">Please provide your signature</p>
     <ul class="sigNav">
       <li class="typeIt"><a href="#type-it" class="current">Type It</a></li>
       <li class="drawIt"><a href="#draw-it" >Draw It</a></li>
@@ -22,13 +19,14 @@
     </ul>
     <div class="sig sigWrapper">
       <div class="typed"></div>
-      <canvas class="pad" width="198" height="55"></canvas>
+      <input type="text" name="name" id="name" class="name">
+      <canvas class="pad" width="798" height="355"></canvas>
       <input type="hidden" name="output" class="output">
     </div>
     <button type="submit">I accept the terms of this agreement.</button>
   </form>
 
-  <script src="../build/jquery.signaturepad.min.js"></script>
+  <script src="../jquery.signaturepad.js"></script>
   <script>
     $(document).ready(function() {
       $('.sigPad').signaturePad();
