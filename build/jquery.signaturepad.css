@@ -55,6 +55,11 @@
     opacity:0.0;
     filter:alpha;
     position:absolute;
+    left:-10000px;
+    top:autp;
+    width:1px;
+    height:1px;
+    overflow:hidden;
 }
 
 .sigPad input.error {

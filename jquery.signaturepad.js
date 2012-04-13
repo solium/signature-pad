@@ -147,10 +147,11 @@
          * @param {Number} newYOffset A pixel value for drawing the newY, used for drawing a single dot on click
          */
         function drawLine (e, newYOffset) {
-            var offset = $(e.target).offset(), newX, newY
+            var offset = canvas.offset(), newX, newY
 
             clearTimeout(mouseLeaveTimeout)
             mouseLeaveTimeout = false
+
 
             if (typeof e.changedTouches !== 'undefined') {
                 newX = Math.floor(e.changedTouches[0].pageX - offset.left)
@@ -162,6 +163,7 @@
 
             if (previous.x === newX && previous.y === newY)
                 return true
+
 
             if (previous.x === null)
                 previous.x = newX
@@ -390,6 +392,7 @@
                     canvasContext.lineWidth = w;
                     canvasContext.lineTo(c[i].x,c[i].y);
                     canvasContext.stroke();
+                    canvasContext.closePath();
                 }
             }
         }
@@ -518,8 +521,6 @@
             $(settings.drawIt, context).addClass(settings.currentClass)
             $(settings.sig, context).addClass(settings.currentClass)
 
-            //$(settings.typeItDesc, context).hide()
-            //$(settings.drawItDesc, context).show()
             $(settings.clear, context).show()
         }
 
@@ -544,9 +545,7 @@
             $(settings.typeIt, context).addClass(settings.currentClass)
             $(settings.sig, context).removeClass(settings.currentClass)
 
-            //$(settings.drawItDesc, context).hide()
             $(settings.clear, context).hide()
-            //$(settings.typeItDesc, context).show()
             $(settings.name, context).focus();
         }
 
@@ -699,14 +698,10 @@
             // Disable selection on the typed div and canvas
             $(settings.typed, context).bind('selectstart.signaturepad', function (e) { return $(e.target).is(':input') })
             canvas.bind('selectstart.signaturepad', function (e) { return $(e.target).is(':input') })
-
-            if (!element.getContext && FlashCanvas)
-                FlashCanvas.initElement(element)
-
+            
             if (element.getContext) {
+                $(settings.sig, context).show() // must be called before getContext('2d') otherwise IE pukes
                 canvasContext = element.getContext('2d')
-
-                $(settings.sig, context).show()
 
                 if (!settings.displayOnly) {
                     if (!settings.drawOnly) {
@@ -805,9 +800,6 @@
                 tmpCanvas.width = element.width
                 tmpCanvas.height = element.height
                 document.body.appendChild(tmpCanvas)
-
-                if (!tmpCanvas.getContext && FlashCanvas)
-                    FlashCanvas.initElement(tmpCanvas)
 
                 tmpContext = tmpCanvas.getContext('2d')
 
